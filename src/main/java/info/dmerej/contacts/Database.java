@@ -27,7 +27,9 @@ public class Database {
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
                     email TEXT NOT NULL
-                    )
+                    );
+                    
+                    CREATE UNIQUE INDEX index_contacts_email ON contacts(email);
                     """
             );
         } catch (SQLException e) {
