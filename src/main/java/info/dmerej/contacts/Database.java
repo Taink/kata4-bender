@@ -66,6 +66,7 @@ public class Database {
                     throw new RuntimeException("Error when inserting contact into DB: " + e);
                 }
             });
+            statement.executeBatch();
 
             /* DEBUG(performance) */
             // long end = System.currentTimeMillis();
