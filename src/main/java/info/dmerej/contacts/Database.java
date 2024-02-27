@@ -12,6 +12,7 @@ public class Database {
         String databasePath = databaseFile.getPath();
         try {
             connection = DriverManager.getConnection("jdbc:sqlite:" + databasePath);
+            connection.setAutoCommit(false);
         } catch (SQLException e) {
             throw new RuntimeException("Could not create connection: " + e.toString());
         }
@@ -38,18 +39,40 @@ public class Database {
     public void insertContacts(Stream<Contact> contacts) {
         String update = "INSERT INTO contacts(name, email, id) VALUES (?, ?, ?)";
 
-        contacts.forEach(contact -> {
-            try {
-                PreparedStatement statement = connection.prepareStatement(update);
-                statement.setString(1, contact.name());
-                statement.setString(2, contact.email());
-                statement.setInt(3, insertedCount++);
+        try {
+            PreparedStatement statement = connection.prepareStatement(update);
 
-                statement.executeUpdate();
-            } catch (SQLException e) {
-                throw new RuntimeException("Error when inserting contact into DB: " + e);
-            }
-        });
+            /* DEBUG(performance) */
+            // long start = System.currentTimeMillis();
+            // java.util.concurrent.atomic.AtomicLong next = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
+            contacts.forEach(contact -> {
+                try {
+                    statement.setString(1, contact.name());
+                    statement.setString(2, contact.email());
+                    statement.setInt(3, insertedCount++);
+
+                    statement.addBatch();
+
+                    if (insertedCount % 1000 == 0) {
+                        int[] inserted = statement.executeBatch();
+                        statement.clearBatch();
+
+                        /* DEBUG(performance) */
+                        // long end = System.currentTimeMillis();
+                        // System.out.println("inserted " + inserted.length + " values in " + (end - next.get()) + "ms");
+                        // next.set(end);
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException("Error when inserting contact into DB: " + e);
+                }
+            });
+
+            /* DEBUG(performance) */
+            // long end = System.currentTimeMillis();
+            // System.out.println("total time taken for " + insertedCount + " records: " + (end - start) + "ms");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String getContactNameFromEmail(String email) {
